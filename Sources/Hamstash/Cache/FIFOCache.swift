@@ -16,7 +16,7 @@
 /// **단점**:
 /// - 자주 사용하는 항목도 오래되면 무조건 제거됨
 /// - 접근 패턴을 전혀 반영하지 않아 캐시 적중률이 낮을 수 있음
-struct FIFOCache<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
+struct FIFOCache<Key: Hashable & Sendable, Value: Sendable> {
 
     private var map: [Key: Node<Key, Value>] = [:]
     private var list = DoublyLinkedList<Key, Value>()

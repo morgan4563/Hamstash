@@ -8,7 +8,7 @@
 ///
 /// - Key: 캐시 항목을 식별하는 키 (Hashable, Sendable)
 /// - Value: 캐시에 저장할 값 (Sendable)
-protocol CachePolicy<Key, Value>: Sendable {
+protocol CachePolicy<Key, Value> {
     associatedtype Key: Hashable & Sendable
     associatedtype Value: Sendable
 

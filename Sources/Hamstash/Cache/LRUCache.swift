@@ -15,7 +15,7 @@
 ///
 /// **단점**:
 /// - 자주 사용하는 항목이라도 한동안 접근하지 않으면 제거될 수 있음
-struct LRUCache<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
+struct LRUCache<Key: Hashable & Sendable, Value: Sendable> {
 
     /// 키 → 노드 매핑 (O(1) 조회용)
     private var map: [Key: Node<Key, Value>] = [:]

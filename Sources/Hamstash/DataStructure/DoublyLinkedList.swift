@@ -5,7 +5,7 @@
 ///
 /// 각 노드는 키-값 쌍을 저장하며, 이전/다음 노드에 대한 참조를 가진다.
 /// class(참조 타입)를 사용하는 이유: Dictionary에서 노드를 직접 참조해 O(1) 접근을 가능하게 하기 위함.
-final class Node<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
+final class Node<Key: Hashable & Sendable, Value: Sendable> {
     let key: Key
     var value: Value
     var prev: Node?
@@ -27,7 +27,7 @@ final class Node<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable
 ///
 /// - 시간복잡도: 삽입 O(1), 삭제 O(1), head/tail 접근 O(1)
 /// - LRU에서: head 쪽 = 가장 최근, tail 쪽 = 가장 오래된 항목
-struct DoublyLinkedList<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
+struct DoublyLinkedList<Key: Hashable & Sendable, Value: Sendable> {
 
     /// 가장 최근 노드 (맨 앞)
     private var head: Node<Key, Value>?

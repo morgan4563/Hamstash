@@ -31,7 +31,7 @@ struct TTLEntry<Value: Sendable>: Sendable {
 /// - 만료 전이라도 용량이 부족하면 어떤 항목을 제거할지 기준이 없음
 ///   (이 구현에서는 capacity 초과 시 만료된 항목을 우선 정리하고,
 ///    그래도 부족하면 가장 빨리 만료되는 항목을 제거)
-struct TTLCache<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
+struct TTLCache<Key: Hashable & Sendable, Value: Sendable> {
 
     private var map: [Key: TTLEntry<Value>] = [:]
 
@@ -42,10 +42,10 @@ struct TTLCache<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable 
 
     /// - Parameters:
     ///   - capacity: 최대 저장 항목 수
-    ///   - defaultTTL: 기본 만료 시간 (초). 0 이하면 1초로 보정. 기본값 300초(5분)
+    ///   - defaultTTL: 기본 만료 시간 (초). 기본값 300초(5분)
     init(capacity: Int, defaultTTL: TimeInterval = 300) {
         self.capacity = capacity
-        self.defaultTTL = defaultTTL > 0 ? defaultTTL : 1
+        self.defaultTTL = defaultTTL
     }
 
     /// 만료된 항목들을 모두 제거한다.
@@ -75,11 +75,12 @@ extension TTLCache: CachePolicy {
     /// - Parameters:
     ///   - value: 저장할 값
     ///   - key: 식별 키
-    ///   - ttl: 만료 시간 (초). 0 이하면 1초로 보정
+    ///   - ttl: 만료 시간 (초). 0보다 커야 함
     mutating func store(_ value: Value, forKey key: Key, ttl: TimeInterval) {
         guard capacity > 0 else { return }
 
-        let safeTTL = ttl > 0 ? ttl : 1
+        precondition(ttl > 0, "ttl은 0보다 커야 합니다. 현재 값: \(ttl)")
+        let safeTTL = ttl
 
         // 이미 존재하면 만료 시각 갱신
         if map[key] != nil {

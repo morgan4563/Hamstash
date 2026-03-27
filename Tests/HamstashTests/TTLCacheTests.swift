@@ -160,19 +160,19 @@ struct TTLCacheEdgeCaseTests {
         #expect(cache.value(forKey: "B") == 2)
     }
 
-    @Test("defaultTTL=0으로 생성하면 1초로 보정된다")
-    func defaultTTLZeroIsCorrected() {
-        let cache = TTLCache<String, Int>(capacity: 3, defaultTTL: 0)
+    @Test("defaultTTL이 양수면 정상 생성된다")
+    func defaultTTLPositiveValue() {
+        let cache = TTLCache<String, Int>(capacity: 3, defaultTTL: 120)
 
-        #expect(cache.defaultTTL == 1)
+        #expect(cache.defaultTTL == 120)
     }
 
-    @Test("ttl=0으로 store하면 1초로 보정되어 즉시 만료되지 않는다")
-    func ttlZeroIsCorrected() {
+    @Test("개별 ttl을 지정하면 해당 TTL이 적용된다")
+    func customTTLIsApplied() {
         var cache = TTLCache<String, Int>(capacity: 3, defaultTTL: 60)
-        cache.store(1, forKey: "A", ttl: 0)
+        cache.store(1, forKey: "A", ttl: 30)
 
-        // 0이 1초로 보정되었으므로 즉시 조회하면 값이 있어야 함
+        // 즉시 조회하면 값이 있어야 함
         #expect(cache.value(forKey: "A") == 1)
     }
 

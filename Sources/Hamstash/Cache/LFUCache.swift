@@ -17,7 +17,7 @@
 /// **단점**:
 /// - 과거에 많이 쓰였지만 더 이상 안 쓰는 항목이 오래 남을 수 있음 (cache pollution)
 /// - LRU보다 구현이 복잡함
-struct LFUCache<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
+struct LFUCache<Key: Hashable & Sendable, Value: Sendable> {
 
     /// 키 → 노드 매핑
     private var map: [Key: Node<Key, Value>] = [:]

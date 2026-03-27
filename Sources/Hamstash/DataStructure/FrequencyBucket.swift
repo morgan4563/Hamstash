@@ -9,7 +9,7 @@
 /// 예: frequency=3인 버킷에 A, B, C가 있으면
 ///     head ↔ C(최근) ↔ B ↔ A(오래된) ↔ tail
 ///     제거 시 A가 먼저 나간다.
-struct FrequencyBucket<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
+struct FrequencyBucket<Key: Hashable & Sendable, Value: Sendable> {
     var list = DoublyLinkedList<Key, Value>()
 
     /// 버킷에 노드를 추가한다 (맨 앞 = 최근).

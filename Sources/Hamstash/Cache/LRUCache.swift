@@ -37,6 +37,8 @@ extension LRUCache: CachePolicy {
     var count: Int { map.count }
 
     mutating func store(_ value: Value, forKey key: Key) {
+        guard capacity > 0 else { return }
+
         // 이미 존재하면 값 갱신 후 맨 앞으로 이동
         if let existingNode = map[key] {
             existingNode.value = value

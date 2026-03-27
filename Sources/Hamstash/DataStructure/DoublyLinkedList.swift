@@ -87,7 +87,15 @@ struct DoublyLinkedList<Key: Hashable & Sendable, Value: Sendable>: @unchecked S
     var isEmpty: Bool { count == 0 }
 
     /// 모든 노드를 제거한다.
+    /// Node가 class(참조 타입)이므로, 노드 간 prev/next 순환 참조를 끊어야 ARC가 메모리를 해제할 수 있다.
     mutating func removeAll() {
+        var current = head
+        while let node = current {
+            let next = node.next
+            node.prev = nil
+            node.next = nil
+            current = next
+        }
         head = nil
         tail = nil
         count = 0

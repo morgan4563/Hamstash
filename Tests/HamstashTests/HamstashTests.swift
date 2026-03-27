@@ -1,7 +1,6 @@
-import Testing
-@testable import Hamstash
-
-@Test func hamstashBasicTest() async throws {
-    // 초기 설정 확인용 테스트
-    #expect(Bool(true))
-}
+// HamstashTests.swift
+// 각 캐시 정책별 테스트는 개별 파일에 작성
+// - LRUCacheTests.swift
+// - LFUCacheTests.swift
+// - FIFOCacheTests.swift
+// - TTLCacheTests.swift

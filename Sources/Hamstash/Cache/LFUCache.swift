@@ -40,7 +40,7 @@ struct LFUCache<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable 
         if let existing = buckets[frequency] {
             return existing
         }
-        let newBucket = FrequencyBucket<Key, Value>(frequency: frequency)
+        let newBucket = FrequencyBucket<Key, Value>()
         buckets[frequency] = newBucket
         return newBucket
     }
@@ -116,6 +116,15 @@ extension LFUCache: CachePolicy {
         buckets[freq]?.remove(node)
         if buckets[freq]?.isEmpty == true {
             buckets.removeValue(forKey: freq)
+            // 제거된 버킷이 최소 빈도였으면 갱신
+            // 캐시가 비었으면 기본값 1, 아니면 남은 버킷 중 최솟값
+            if minFrequency == freq {
+                if buckets.isEmpty {
+                    minFrequency = 1
+                } else {
+                    minFrequency = buckets.keys.min()!
+                }
+            }
         }
         map.removeValue(forKey: key)
     }

@@ -10,12 +10,7 @@
 ///     head ↔ C(최근) ↔ B ↔ A(오래된) ↔ tail
 ///     제거 시 A가 먼저 나간다.
 struct FrequencyBucket<Key: Hashable & Sendable, Value: Sendable>: @unchecked Sendable {
-    let frequency: Int
     var list = DoublyLinkedList<Key, Value>()
-
-    init(frequency: Int) {
-        self.frequency = frequency
-    }
 
     /// 버킷에 노드를 추가한다 (맨 앞 = 최근).
     mutating func add(_ node: Node<Key, Value>) {
@@ -33,5 +28,4 @@ struct FrequencyBucket<Key: Hashable & Sendable, Value: Sendable>: @unchecked Se
     }
 
     var isEmpty: Bool { list.isEmpty }
-    var count: Int { list.count }
 }

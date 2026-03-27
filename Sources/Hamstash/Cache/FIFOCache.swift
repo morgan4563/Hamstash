@@ -34,6 +34,8 @@ extension FIFOCache: CachePolicy {
     var count: Int { map.count }
 
     mutating func store(_ value: Value, forKey key: Key) {
+        guard capacity > 0 else { return }
+
         // 이미 존재하면 값만 갱신 (순서는 유지 — FIFO이므로)
         if let existingNode = map[key] {
             existingNode.value = value

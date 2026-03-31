@@ -11,7 +11,7 @@ import Foundation
 /// ```swift
 /// let disk = DiskCache(config: .init(
 ///     name: "images",
-///     totalCostLimit: 50 * 1024 * 1024,  // 50MB
+///     totalCostLimit: .megabytes(50),     // 50MB
 ///     maxAge: 7 * 24 * 60 * 60           // 7일
 /// ))
 /// disk.store(imageData, forKey: "profile_123")
@@ -26,30 +26,67 @@ public final class DiskCache: @unchecked Sendable {
 
     // MARK: - 설정
 
+    /// 바이트 크기를 읽기 쉽게 표현하기 위한 타입
+    ///
+    /// ```swift
+    /// DiskCache.Configuration(totalCostLimit: .megabytes(50))   // 50MB
+    /// DiskCache.Configuration(totalCostLimit: .gigabytes(1))    // 1GB
+    /// ```
+    public struct ByteSize: Sendable, Equatable {
+        /// 바이트 단위 값
+        public let bytes: Int
+
+        /// 바이트 단위로 직접 지정한다.
+        public init(bytes: Int) {
+            precondition(bytes >= 0, "bytes는 0 이상이어야 합니다. 현재 값: \(bytes)")
+            self.bytes = bytes
+        }
+
+        /// 제한 없음 (0바이트)
+        public static let unlimited = ByteSize(bytes: 0)
+
+        /// 킬로바이트 단위로 지정한다.
+        public static func kilobytes(_ value: Int) -> ByteSize {
+            precondition(value > 0, "kilobytes는 0보다 커야 합니다. 현재 값: \(value)")
+            return ByteSize(bytes: value * 1024)
+        }
+
+        /// 메가바이트 단위로 지정한다.
+        public static func megabytes(_ value: Int) -> ByteSize {
+            precondition(value > 0, "megabytes는 0보다 커야 합니다. 현재 값: \(value)")
+            return ByteSize(bytes: value * 1024 * 1024)
+        }
+
+        /// 기가바이트 단위로 지정한다.
+        public static func gigabytes(_ value: Int) -> ByteSize {
+            precondition(value > 0, "gigabytes는 0보다 커야 합니다. 현재 값: \(value)")
+            return ByteSize(bytes: value * 1024 * 1024 * 1024)
+        }
+    }
+
     /// 디스크 캐시 설정
     public struct Configuration: Sendable {
         /// 캐시 이름 (디렉토리명으로 사용)
         public let name: String
-        /// 최대 용량 (바이트). 0이면 무제한
+        /// 최대 용량 (바이트). `.unlimited`이면 무제한
         public let totalCostLimit: Int
         /// 항목 최대 수명 (초). 0이면 무제한
         public let maxAge: TimeInterval
 
         /// - Parameters:
         ///   - name: 캐시 이름 (기본: "default")
-        ///   - totalCostLimit: 최대 용량 바이트 (기본: 0 = 무제한)
+        ///   - totalCostLimit: 최대 용량 (기본: `.unlimited` = 무제한)
         ///   - maxAge: 최대 수명 초 (기본: 0 = 무제한)
         public init(
             name: String = "default",
-            totalCostLimit: Int = 0,
+            totalCostLimit: ByteSize = .unlimited,
             maxAge: TimeInterval = 0
         ) {
             precondition(!name.isEmpty, "캐시 이름은 비어있을 수 없습니다.")
-            precondition(totalCostLimit >= 0, "totalCostLimit은 0 이상이어야 합니다. 현재 값: \(totalCostLimit)")
             precondition(maxAge >= 0, "maxAge는 0 이상이어야 합니다. 현재 값: \(maxAge)")
 
             self.name = name
-            self.totalCostLimit = totalCostLimit
+            self.totalCostLimit = totalCostLimit.bytes
             self.maxAge = maxAge
         }
     }

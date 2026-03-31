@@ -133,6 +133,8 @@ public final class HamstashCache<Key: Hashable & Sendable, Value: Sendable>: @un
 
     /// 최대 저장 가능 항목 수
     public var capacity: Int {
-        policy.capacity
+        lock.lock()
+        defer { lock.unlock() }
+        return policy.capacity
     }
 }

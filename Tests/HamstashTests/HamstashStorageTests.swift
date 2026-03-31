@@ -10,7 +10,7 @@ import Foundation
 private func makeTestStorage(
     memoryPolicy: HamstashCache<String, Data>.Policy = .lru,
     memoryCapacity: Int = 100,
-    diskTotalCostLimit: Int = 0,
+    diskTotalCostLimit: DiskCache.ByteSize = .unlimited,
     diskMaxAge: TimeInterval = 0
 ) -> (HamstashStorage, URL) {
     let tempDir = FileManager.default.temporaryDirectory
@@ -226,6 +226,60 @@ struct HamstashStoragePolicyTests {
 
         // 디스크에서 복구
         #expect(storage.value(forKey: "A") == testData("1"))
+    }
+}
+
+// MARK: - 저장 옵션
+
+@Suite("HamstashStorage - 저장 옵션")
+struct HamstashStorageOptionTests {
+
+    @Test("memoryOnly로 저장하면 디스크에는 저장되지 않는다")
+    func memoryOnly() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("hello"), forKey: "A", option: .memoryOnly)
+
+        #expect(storage.memoryCache.value(forKey: "A") != nil)
+        #expect(storage.diskCache.value(forKey: "A") == nil)
+    }
+
+    @Test("diskOnly로 저장하면 메모리에는 저장되지 않는다")
+    func diskOnly() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("hello"), forKey: "A", option: .diskOnly)
+
+        #expect(storage.memoryCache.value(forKey: "A") == nil)
+        #expect(storage.diskCache.value(forKey: "A") != nil)
+    }
+
+    @Test("memoryAndDisk(기본값)로 저장하면 양쪽 모두 저장된다")
+    func memoryAndDisk() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("hello"), forKey: "A")
+
+        #expect(storage.memoryCache.value(forKey: "A") != nil)
+        #expect(storage.diskCache.value(forKey: "A") != nil)
+    }
+
+    @Test("diskOnly로 저장한 데이터도 value 조회 시 promote된다")
+    func diskOnlyPromote() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("hello"), forKey: "A", option: .diskOnly)
+
+        // value 호출 → 디스크에서 찾아서 메모리에 promote
+        let result = storage.value(forKey: "A")
+        #expect(result == testData("hello"))
+
+        // promote 후 메모리에 존재
+        #expect(storage.memoryCache.value(forKey: "A") != nil)
     }
 }
 

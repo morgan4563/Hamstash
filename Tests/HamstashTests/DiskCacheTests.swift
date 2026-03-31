@@ -9,7 +9,7 @@ import Foundation
 /// 각 테스트에서 격리된 DiskCache를 생성한다.
 /// 고유한 디렉토리를 사용하여 테스트 간 간섭을 방지한다.
 private func makeTestDiskCache(
-    totalCostLimit: Int = 0,
+    totalCostLimit: DiskCache.ByteSize = .unlimited,
     maxAge: TimeInterval = 0
 ) -> (DiskCache, URL) {
     let tempDir = FileManager.default.temporaryDirectory
@@ -205,7 +205,7 @@ struct DiskCacheCapacityTests {
     @Test("totalCostLimit 초과 시 오래된 파일이 제거된다")
     func trimOnOverflow() {
         // 500바이트 제한
-        let (cache, dir) = makeTestDiskCache(totalCostLimit: 500)
+        let (cache, dir) = makeTestDiskCache(totalCostLimit: .init(bytes: 500))
         defer { cleanup(dir) }
 
         // 200바이트씩 3개 = 600바이트 → 제한 초과
@@ -220,7 +220,7 @@ struct DiskCacheCapacityTests {
 
     @Test("totalCostLimit=0이면 용량 제한 없이 저장된다")
     func noLimit() {
-        let (cache, dir) = makeTestDiskCache(totalCostLimit: 0)
+        let (cache, dir) = makeTestDiskCache()
         defer { cleanup(dir) }
 
         for i in 0..<100 {

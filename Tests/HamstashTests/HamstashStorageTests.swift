@@ -315,3 +315,295 @@ struct HamstashStorageConcurrencyTests {
         // 크래시 없이 완료되면 성공
     }
 }
+
+// MARK: - 캐시 통계
+
+@Suite("HamstashStorage - 캐시 통계")
+struct HamstashStorageStatisticsTests {
+
+    @Test("메모리 히트가 정확하게 카운트된다")
+    func memoryHit() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("A"), forKey: "A")
+        _ = storage.value(forKey: "A")
+        _ = storage.value(forKey: "A")
+
+        let stats = storage.statistics
+        #expect(stats.memoryHitCount == 2)
+        #expect(stats.diskHitCount == 0)
+        #expect(stats.missCount == 0)
+    }
+
+    @Test("디스크 히트가 정확하게 카운트된다")
+    func diskHit() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("A"), forKey: "A")
+        storage.clearMemory()
+
+        _ = storage.value(forKey: "A")
+
+        let stats = storage.statistics
+        #expect(stats.memoryHitCount == 0)
+        #expect(stats.diskHitCount == 1)
+    }
+
+    @Test("미스가 정확하게 카운트된다")
+    func miss() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        _ = storage.value(forKey: "없는키")
+        _ = storage.value(forKey: "없는키2")
+
+        let stats = storage.statistics
+        #expect(stats.missCount == 2)
+        #expect(stats.hitCount == 0)
+    }
+
+    @Test("hitRate가 정확하게 계산된다")
+    func hitRate() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("A"), forKey: "A")
+        _ = storage.value(forKey: "A")       // 메모리 히트
+        _ = storage.value(forKey: "없는키")   // 미스
+
+        let stats = storage.statistics
+        #expect(stats.hitRate == 0.5)
+        #expect(stats.totalCount == 2)
+    }
+
+    @Test("조회 기록이 없으면 hitRate는 0이다")
+    func emptyHitRate() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        #expect(storage.statistics.hitRate == 0)
+        #expect(storage.statistics.totalCount == 0)
+    }
+
+    @Test("resetStatistics가 카운터를 초기화한다")
+    func reset() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.store(testData("A"), forKey: "A")
+        _ = storage.value(forKey: "A")
+        _ = storage.value(forKey: "없는키")
+
+        storage.resetStatistics()
+
+        let stats = storage.statistics
+        #expect(stats.memoryHitCount == 0)
+        #expect(stats.diskHitCount == 0)
+        #expect(stats.missCount == 0)
+    }
+}
+
+// MARK: - Named Cache
+
+@Suite("HamstashStorage - Named Cache")
+struct HamstashStorageNamedTests {
+
+    @Test("같은 이름이면 같은 인스턴스를 반환한다")
+    func sameNameSameInstance() {
+        defer { HamstashStorage.removeAllNamed() }
+
+        let a = HamstashStorage.named("test_same")
+        let b = HamstashStorage.named("test_same")
+
+        #expect(a === b)
+    }
+
+    @Test("다른 이름이면 다른 인스턴스를 반환한다")
+    func differentNameDifferentInstance() {
+        defer { HamstashStorage.removeAllNamed() }
+
+        let a = HamstashStorage.named("test_alpha")
+        let b = HamstashStorage.named("test_beta")
+
+        #expect(a !== b)
+    }
+
+    @Test("Named Cache 간 데이터가 격리된다")
+    func dataIsolation() {
+        defer { HamstashStorage.removeAllNamed() }
+
+        let profile = HamstashStorage.named("test_profile")
+        let thumbnail = HamstashStorage.named("test_thumbnail")
+
+        profile.store(testData("프로필"), forKey: "user1")
+        thumbnail.store(testData("썸네일"), forKey: "user1")
+
+        #expect(profile.value(forKey: "user1") == testData("프로필"))
+        #expect(thumbnail.value(forKey: "user1") == testData("썸네일"))
+    }
+
+    @Test("removeNamed가 레지스트리에서 제거한다")
+    func removeNamed() {
+        let a = HamstashStorage.named("test_remove")
+        HamstashStorage.removeNamed("test_remove")
+        let b = HamstashStorage.named("test_remove")
+
+        // 제거 후 새로 만들면 다른 인스턴스
+        #expect(a !== b)
+
+        HamstashStorage.removeAllNamed()
+    }
+}
+
+// MARK: - Pin (고정 항목)
+
+@Suite("HamstashStorage - Pin")
+struct HamstashStoragePinTests {
+
+    @Test("고정된 항목이 조회된다")
+    func pinAndRetrieve() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        let data = testData("logo")
+        storage.pin(data, forKey: "logo")
+
+        #expect(storage.value(forKey: "logo") == data)
+    }
+
+    @Test("고정된 항목은 메모리 캐시를 비워도 유지된다")
+    func pinSurvivesClearMemory() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.pin(testData("logo"), forKey: "logo")
+        storage.clearMemory()
+
+        #expect(storage.value(forKey: "logo") == testData("logo"))
+    }
+
+    @Test("고정된 항목은 캐시 정책에 의해 제거되지 않는다")
+    func pinSurvivesEviction() {
+        let (storage, dir) = makeTestStorage(memoryCapacity: 2)
+        defer { cleanup(dir) }
+
+        // logo를 고정
+        storage.pin(testData("logo"), forKey: "logo")
+
+        // 캐시를 가득 채우고 넘침 → 일반 항목은 evict
+        storage.store(testData("1"), forKey: "A")
+        storage.store(testData("2"), forKey: "B")
+        storage.store(testData("3"), forKey: "C")
+
+        // 고정 항목은 캐시 정책과 별개이므로 항상 존재
+        #expect(storage.value(forKey: "logo") == testData("logo"))
+    }
+
+    @Test("unpin 후 keepInCache=true면 일반 캐시로 이동한다")
+    func unpinKeepInCache() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.pin(testData("logo"), forKey: "logo")
+        storage.unpin(forKey: "logo", keepInCache: true)
+
+        #expect(storage.isPinned(forKey: "logo") == false)
+        // 일반 메모리 캐시로 이동했으므로 조회 가능
+        #expect(storage.memoryCache.value(forKey: "logo") == testData("logo"))
+    }
+
+    @Test("unpin 후 keepInCache=false면 메모리에서 제거된다")
+    func unpinRemoveFromMemory() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.pin(testData("logo"), forKey: "logo")
+        storage.unpin(forKey: "logo", keepInCache: false)
+
+        #expect(storage.isPinned(forKey: "logo") == false)
+        #expect(storage.memoryCache.value(forKey: "logo") == nil)
+        // 디스크에는 남아있음
+        #expect(storage.diskCache.value(forKey: "logo") == testData("logo"))
+    }
+
+    @Test("isPinned가 정확하게 반환한다")
+    func isPinned() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        #expect(storage.isPinned(forKey: "logo") == false)
+
+        storage.pin(testData("logo"), forKey: "logo")
+        #expect(storage.isPinned(forKey: "logo") == true)
+
+        storage.unpin(forKey: "logo")
+        #expect(storage.isPinned(forKey: "logo") == false)
+    }
+
+    @Test("remove는 고정 항목도 제거한다")
+    func removeAlsoUnpins() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.pin(testData("logo"), forKey: "logo")
+        storage.remove(forKey: "logo")
+
+        #expect(storage.isPinned(forKey: "logo") == false)
+        #expect(storage.value(forKey: "logo") == nil)
+    }
+
+    @Test("clearAll은 고정 항목도 모두 제거한다")
+    func clearAllRemovesPins() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.pin(testData("logo"), forKey: "logo")
+        storage.pin(testData("icon"), forKey: "icon")
+        storage.clearAll()
+
+        #expect(storage.pinnedCount == 0)
+        #expect(storage.value(forKey: "logo") == nil)
+    }
+
+    @Test("pinnedCount가 정확하다")
+    func pinnedCount() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        #expect(storage.pinnedCount == 0)
+
+        storage.pin(testData("a"), forKey: "A")
+        storage.pin(testData("b"), forKey: "B")
+        #expect(storage.pinnedCount == 2)
+
+        storage.unpin(forKey: "A")
+        #expect(storage.pinnedCount == 1)
+    }
+
+    @Test("고정 항목 조회도 통계에 반영된다")
+    func pinHitCountsAsMemoryHit() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.pin(testData("logo"), forKey: "logo")
+        _ = storage.value(forKey: "logo")
+
+        #expect(storage.statistics.memoryHitCount == 1)
+    }
+
+    @Test("isCached가 고정 항목도 감지한다")
+    func isCachedDetectsPin() {
+        let (storage, dir) = makeTestStorage()
+        defer { cleanup(dir) }
+
+        storage.pin(testData("logo"), forKey: "logo")
+        storage.clearMemory()
+        storage.clearDisk()
+
+        // 메모리/디스크 비워도 pin은 감지됨
+        // (pin할 때 디스크에도 저장되므로 clearDisk 후에는 디스크에 없지만 pin 자체는 남아있음)
+        #expect(storage.isCached(forKey: "logo") == true)
+    }
+}

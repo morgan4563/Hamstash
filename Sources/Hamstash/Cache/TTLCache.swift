@@ -80,11 +80,10 @@ extension TTLCache: CachePolicy {
         guard capacity > 0 else { return }
 
         precondition(ttl > 0, "ttl은 0보다 커야 합니다. 현재 값: \(ttl)")
-        let safeTTL = ttl
 
         // 이미 존재하면 만료 시각 갱신
         if map[key] != nil {
-            map[key] = TTLEntry(value: value, expiresAt: Date().addingTimeInterval(safeTTL))
+            map[key] = TTLEntry(value: value, expiresAt: Date().addingTimeInterval(ttl))
             return
         }
 
@@ -96,7 +95,7 @@ extension TTLCache: CachePolicy {
             }
         }
 
-        map[key] = TTLEntry(value: value, expiresAt: Date().addingTimeInterval(safeTTL))
+        map[key] = TTLEntry(value: value, expiresAt: Date().addingTimeInterval(ttl))
     }
 
     mutating func value(forKey key: Key) -> Value? {

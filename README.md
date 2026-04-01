@@ -14,7 +14,7 @@ Swift 기반 이미지 캐싱 라이브러리. 메모리 + 디스크 2단계 캐
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/{사용자명}/Hamstash.git", from: "1.0.0")
+    .package(url: "https://github.com/morgan4563/Hamstash.git", from: "1.0.0")
 ]
 ```
 
